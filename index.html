@@ -5,147 +5,246 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SmartFin PRO</title>
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22SmartFin%22,%22short_name%22:%22SmartFin%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22}">
-    
+    <title>SmartFin Payment Tracker Dashboard</title>
     <style>
         :root {
             --notion-bg: #ffffff; --notion-text: #37352f; --notion-border: #edece9;
             --notion-gray: #f1f1ef; --notion-blue: #2383e2; --status-secure: #00a35c;
             --status-urgent: #eb5757; --status-overdue: #37352f;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--notion-bg); color: var(--notion-text); padding: 15px; max-width: 1000px; margin: auto; }
-        .header-main { border-bottom: 2px solid var(--notion-blue); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end; }
-        h1 { font-size: 1.5rem; margin: 0; }
-        .storage-indicator { font-size: 10px; padding: 4px 8px; border-radius: 10px; background: #eee; color: #666; }
-        .search-container { margin: 10px 0; }
-        #searchInput { width: 100%; padding: 12px; border: 1px solid var(--notion-border); border-radius: 8px; font-size: 14px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); -webkit-appearance: none; }
-        .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 15px; border: 1px solid var(--notion-border); border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
-        th { text-align: left; color: rgba(55, 53, 47, 0.6); font-weight: 600; border-bottom: 1px solid var(--notion-border); padding: 10px; background: #fafafa; }
-        td { padding: 10px; border-bottom: 1px solid var(--notion-border); vertical-align: middle; }
-        .progress-text { font-family: monospace; font-weight: bold; }
-        .controls { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 8px; background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid var(--notion-border); }
-        .btn-action { flex: 1; min-width: 120px; padding: 12px; cursor: pointer; border-radius: 8px; border: 1px solid #ddd; background: white; font-weight: 600; font-size: 13px; text-align: center; }
+        body { font-family: -apple-system, sans-serif; background: var(--notion-bg); color: var(--notion-text); padding: 20px; max-width: 1000px; margin: auto; }
+        .header-main { border-bottom: 2px solid var(--notion-blue); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        h1 { font-size: 1.8rem; margin: 0; }
+        .current-date { font-size: 12px; color: #888; font-weight: bold; }
+        h2 { font-size: 1.1rem; margin-top: 30px; border-bottom: 1px solid var(--notion-border); padding-bottom: 5px; color: #666; }
+        .search-container { margin: 15px 0; }
+        #searchInput { width: 100%; padding: 12px; border: 1px solid var(--notion-border); border-radius: 8px; font-size: 14px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 20px; border: 1px solid var(--notion-border); border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 750px; }
+        th { text-align: left; color: rgba(55, 53, 47, 0.6); font-weight: 600; border-bottom: 1px solid var(--notion-border); padding: 12px; background: #fafafa; }
+        td { padding: 12px; border-bottom: 1px solid var(--notion-border); vertical-align: middle; }
+        .progress-text { font-family: monospace; font-weight: bold; color: #444; white-space: nowrap; }
+        .edit-input { width: 95%; padding: 6px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; background: transparent; }
+        .edit-input:focus { background: #fff; border-color: var(--notion-blue); outline: none; }
+        .controls { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 10px; background: #f9f9f9; padding: 20px; border-radius: 12px; border: 1px solid var(--notion-border); }
+        .btn-action { padding: 10px 16px; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; font-weight: 600; font-size: 13px; transition: 0.2s; }
+        .btn-action:hover { background: #eee; }
         .btn-blue { background: var(--notion-blue); color: white; border: none; }
         .urgent-text { color: var(--status-urgent); font-weight: bold; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="header-main">
-        <h1>SmartFin <small style="font-size: 10px; color: #aaa;">v1.3 PRO</small></h1>
-        <div id="storageTag" class="storage-indicator">OFFLINE MODE</div>
+        <h1>SmartFin <small style="font-size: 10px; color: #aaa;">MVP v1.2</small></h1>
+        <div class="current-date" id="headerDate">--/----</div>
     </div>
 
     <div class="search-container">
-        <input type="text" id="searchInput" placeholder="🔍 Card Name..." onkeyup="render()">
+        <input type="text" id="searchInput" placeholder="🔍 Search card name..." onkeyup="render()">
     </div>
 
-    <h2>🗓️ Tracker</h2>
-    <div class="table-wrapper"><table id="pTable"><thead><tr><th>Month</th><th>Status</th><th>Progress</th><th>Due</th><th>Card</th><th>A</th><th>P</th><th>F</th></tr></thead><tbody id="paymentBody"></tbody></table></div>
+    <h2>🗓️ Monthly Tracker</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 80px;">Month</th>
+                    <th style="width: 110px;">Status</th>
+                    <th style="width: 150px;">Progress</th>
+                    <th style="width: 50px;">Due</th>
+                    <th>Card Name</th>
+                    <th style="width: 50px;">Auto</th>
+                    <th style="width: 50px;">PPS</th>
+                    <th style="width: 50px;">Fund</th>
+                </tr>
+            </thead>
+            <tbody id="paymentBody"></tbody>
+        </table>
+    </div>
 
-    <h2>⚠️ Fees</h2>
-    <div class="table-wrapper"><table><thead><tr><th>Status</th><th>Card</th><th>Deadline</th><th>Remarks</th></tr></thead><tbody id="feeBody"></tbody></table></div>
+    <h2>⚠️ Annual Fee Tracker</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 100px;">Fee Status</th>
+                    <th>Card Name</th>
+                    <th style="width: 120px;">Deadline</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody id="feeBody"></tbody>
+        </table>
+    </div>
 
+    <h2 style="color: var(--notion-blue);">⚙️ Master Database Reference</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Card Name</th>
+                    <th style="width: 60px;">Due</th>
+                    <th style="width: 50px;">Auto?</th>
+                    <th style="width: 130px;">Fee Deadline</th>
+                    <th>Remarks</th>
+                    <th style="width: 40px;"></th>
+                </tr>
+            </thead>
+            <tbody id="masterBody"></tbody>
+        </table>
+    </div>
+    
     <div class="controls">
         <button class="btn-action btn-blue" onclick="addNewCard()">+ Add Card</button>
-        <button class="btn-action" onclick="downloadBackup()">💾 Export</button>
-        <button class="btn-action" onclick="document.getElementById('fileInput').click()">📂 Import</button>
+        <button class="btn-action" onclick="downloadBackup()">💾 Export JSON</button>
+        <button class="btn-action" onclick="document.getElementById('fileInput').click()">📂 Import JSON</button>
         <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)" style="display:none">
     </div>
 
     <script>
-        // 1. PERMANENT DATABASE KEY
-        const DB_KEY = 'smartfin_v1_fixed_storage';
-        const RESET_KEY = 'smartfin_reset_marker_v1';
+        // Use a persistent key that matches your storage preference
+        const DB_KEY = 'smartfin_v1_prod_stable'; 
+        const RESET_KEY = 'smartfin_last_reset_date';
 
-        const initialCards = [
-            { id: 1, name: "SAMPLE CARD", due: 5, autopay: true, pps: false, fund: false, deadline: "2026-12-01", remarks: "Example" }
+        const sampleCards = [
+            { id: 1, name: "Sample Card A", due: 5, autopay: true, pps: false, fund: false, deadline: "", remarks: "Default Demo" },
+            { id: 2, name: "Sample Card B", due: 20, autopay: false, pps: false, fund: false, deadline: "2026-06-01", remarks: "Waiver needed" }
         ];
 
-        // 2. STABLE LOAD LOGIC
+        // Ensure we load saved data if it exists, otherwise use samples
         let savedData = localStorage.getItem(DB_KEY);
-        let cards = (savedData && JSON.parse(savedData).length > 0) ? JSON.parse(savedData) : initialCards;
-
-        function save() {
-            try {
-                localStorage.setItem(DB_KEY, JSON.stringify(cards));
-                // Visual feedback that the save worked
-                document.getElementById('storageTag').innerText = "✅ DATA PERSISTED";
-                document.getElementById('storageTag').style.background = "#e6fffa";
-                render();
-            } catch (e) {
-                alert("Browser Storage Error!");
-            }
-        }
+        let cards = (savedData && JSON.parse(savedData).length > 0) ? JSON.parse(savedData) : sampleCards;
 
         function handleAutomation() {
             const now = new Date();
-            const currentLabel = `${now.getMonth() + 1}/${now.getFullYear()}`;
-            if (localStorage.getItem(RESET_KEY) !== currentLabel) {
-                cards.forEach(c => { c.pps = false; c.fund = false; });
-                localStorage.setItem(RESET_KEY, currentLabel);
-                save();
+            const currentMonthYear = `${now.getMonth() + 1}/${now.getFullYear()}`;
+            document.getElementById('headerDate').innerText = currentMonthYear;
+
+            const lastReset = localStorage.getItem(RESET_KEY);
+            
+            if (lastReset !== currentMonthYear) {
+                cards.forEach(c => {
+                    c.pps = false;
+                    c.fund = false;
+                });
+                localStorage.setItem(RESET_KEY, currentMonthYear);
+                save(); 
             }
         }
 
-        // 3. CORRECTED 100% LOGIC
+        // CORRECTED LOGIC: Requires (Autopay OR PPS) AND Fund for 100%
         const getProgress = (c) => {
-            const paySet = c.autopay || c.pps;
-            const fundSet = c.fund;
-            
-            // Requires BOTH for 100%
-            if (paySet && fundSet) return "▓▓▓▓ 100%";
-            // Only one checked
-            if (paySet || fundSet) return "▓▓░░  50%";
-            return "░░░░   0%";
+            const paymentMethodSet = c.autopay || c.pps;
+            const fundsConfirmed = c.fund;
+
+            if (paymentMethodSet && fundsConfirmed) {
+                return "▓▓▓▓▓▓ 100% ✅";
+            } else if (paymentMethodSet || fundsConfirmed) {
+                return "▓▓▓░░░  50% ⏳";
+            } else {
+                return "░░░░░░   0% ❌";
+            }
+        };
+
+        const getStatusShield = (c) => {
+            const today = new Date().getDate();
+            if (c.fund) return `<span style="color:var(--status-secure)">● SECURE</span>`;
+            if (today > c.due) return `<span style="color:var(--status-overdue)">💀 OVERDUE</span>`;
+            if (c.due - today <= 3) return `<span style="color:var(--status-urgent)">🔴 URGENT</span>`;
+            return `<span style="color:#ccc">● PENDING</span>`;
         };
 
         function render() {
             const pBody = document.getElementById('paymentBody');
             const fBody = document.getElementById('feeBody');
+            const mBody = document.getElementById('masterBody');
             const search = document.getElementById('searchInput').value.toLowerCase();
-            pBody.innerHTML = ''; fBody.innerHTML = '';
             
-            const now = new Date();
-            const monthStr = `${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()}`;
+            pBody.innerHTML = ''; fBody.innerHTML = ''; mBody.innerHTML = '';
 
-            cards.sort((a,b)=>a.due-b.due).forEach(c => {
+            const today = new Date(); 
+            today.setHours(0,0,0,0);
+            const monthLabel = `${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+            const next30 = new Date(); next30.setDate(today.getDate() + 30);
+
+            cards.sort((a,b) => a.due - b.due).forEach(c => {
                 if (!c.name.toLowerCase().includes(search)) return;
-                
-                const today = now.getDate();
-                let status = c.fund ? '● SECURE' : (today > c.due ? '💀 OVERDUE' : (c.due - today <= 3 ? '🔴 URGENT' : '● PENDING'));
-                let color = c.fund ? 'var(--status-secure)' : (today > c.due ? 'var(--notion-text)' : (c.due-today <= 3 ? 'var(--status-urgent)' : '#ccc'));
 
                 pBody.innerHTML += `<tr>
-                    <td style="color:#888">${monthStr}</td>
-                    <td style="color:${color}; font-weight:bold">${status}</td>
+                    <td style="color:#888">${monthLabel}</td>
+                    <td style="font-weight:bold">${getStatusShield(c)}</td>
                     <td class="progress-text">${getProgress(c)}</td>
                     <td>${c.due}</td>
                     <td><strong>${c.name}</strong></td>
-                    <td><input type="checkbox" ${c.autopay?'checked':''} onchange="update(${c.id},'autopay',this.checked)"></td>
-                    <td><input type="checkbox" ${c.pps?'checked':''} onchange="update(${c.id},'pps',this.checked)"></td>
-                    <td><input type="checkbox" ${c.fund?'checked' :''} onchange="update(${c.id},'fund',this.checked)"></td>
+                    <td><input type="checkbox" ${c.autopay ? 'checked' : ''} onchange="update(${c.id}, 'autopay', this.checked)"></td>
+                    <td><input type="checkbox" ${c.pps ? 'checked' : ''} onchange="update(${c.id}, 'pps', this.checked)"></td>
+                    <td><input type="checkbox" ${c.fund ? 'checked' : ''} onchange="update(${c.id}, 'fund', this.checked)"></td>
+                </tr>`;
+
+                if (c.deadline) {
+                    const dl = new Date(c.deadline); dl.setHours(0,0,0,0);
+                    let status = dl < today ? `💀 EXPIRED` : dl <= next30 ? `🚩 URGENT` : `🟢 OK`;
+                    fBody.innerHTML += `<tr style="${dl <= next30 && dl >= today ? 'background:#fffafa' : ''}">
+                        <td class="${dl <= next30 && dl >= today ? 'urgent-text' : ''}">${status}</td>
+                        <td><strong>${c.name}</strong></td><td>${c.deadline}</td><td>${c.remarks}</td>
+                    </tr>`;
+                }
+
+                mBody.innerHTML += `<tr>
+                    <td><input class="edit-input" value="${c.name}" onchange="update(${c.id}, 'name', this.value)"></td>
+                    <td><input class="edit-input" type="number" value="${c.due}" onchange="update(${c.id}, 'due', parseInt(this.value))"></td>
+                    <td><input type="checkbox" ${c.autopay ? 'checked' : ''} onchange="update(${c.id}, 'autopay', this.checked)"></td>
+                    <td><input class="edit-input" type="date" value="${c.deadline}" onchange="update(${c.id}, 'deadline', this.value)"></td>
+                    <td><input class="edit-input" value="${c.remarks}" onchange="update(${c.id}, 'remarks', this.value)"></td>
+                    <td><button onclick="deleteCard(${c.id})" style="border:none;background:none;cursor:pointer;color:#ccc">✕</button></td>
                 </tr>`;
             });
         }
 
-        window.update = (id, f, v) => { const c = cards.find(x=>x.id===id); c[f]=v; save(); };
-        window.addNewCard = () => { cards.push({id:Date.now(), name:"New Card", due:1, autopay:false, pps:false, fund:false}); save(); };
-        window.downloadBackup = () => {
-            const blob = new Blob([JSON.stringify(cards)], {type:"application/json"});
-            const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="smartfin.json"; a.click();
+        window.update = (id, field, value) => {
+            const card = cards.find(c => c.id === id);
+            card[field] = value;
+            save();
         };
+
+        window.addNewCard = () => {
+            cards.push({ id: Date.now(), name: "New Card", due: 1, autopay: false, pps: false, fund: false, deadline: "", remarks: "" });
+            save();
+        };
+
+        window.deleteCard = (id) => {
+            if(confirm("Delete this card row?")) { cards = cards.filter(c => c.id !== id); save(); }
+        };
+
+        window.downloadBackup = () => {
+            const blob = new Blob([JSON.stringify(cards, null, 2)], {type: "application/json"});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `smartfin_export.json`;
+            a.click();
+        };
+
         window.importBackup = (e) => {
             const reader = new FileReader();
-            reader.onload = (ev) => { 
-                cards = JSON.parse(ev.target.result); 
-                save(); 
-                alert("Database Locked Successfully!"); 
+            reader.onload = (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (Array.isArray(imported)) {
+                        cards = imported;
+                        save();
+                        alert("Import Successful!");
+                    }
+                } catch(err) { alert("Invalid File."); }
             };
             reader.readAsText(e.target.files[0]);
         };
+
+        function save() {
+            localStorage.setItem(DB_KEY, JSON.stringify(cards));
+            render();
+        }
 
         handleAutomation();
         render();
