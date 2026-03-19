@@ -120,7 +120,6 @@
 
             const lastReset = localStorage.getItem(RESET_KEY); // Format: "M/YYYY"
             
-            // If the month has changed since the last time the app was opened
             if (lastReset !== currentMonthYear) {
                 cards.forEach(c => {
                     c.pps = false;
@@ -131,11 +130,18 @@
             }
         }
 
+        // UPDATED LOGIC: (Payment Method Set AND Funds Confirmed) = 100%
         const getProgress = (c) => {
-            const paySet = c.autopay || c.pps;
-            if (paySet && c.fund) return "▓▓▓▓▓▓ 100% ✅";
-            if (paySet || c.fund) return "▓▓▓░░░  50% ⏳";
-            return "░░░░░░   0% ❌";
+            const paymentMethodSet = c.autopay || c.pps;
+            const fundsConfirmed = c.fund;
+
+            if (paymentMethodSet && fundsConfirmed) {
+                return "▓▓▓▓▓▓ 100% ✅";
+            } else if (paymentMethodSet || fundsConfirmed) {
+                return "▓▓▓░░░  50% ⏳";
+            } else {
+                return "░░░░░░   0% ❌";
+            }
         };
 
         const getStatusShield = (c) => {
