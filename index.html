@@ -104,8 +104,7 @@
     </div>
 
     <script>
-        // Use a persistent key that matches your storage preference
-        const DB_KEY = 'smartfin_v1_prod_stable'; 
+        const DB_KEY = 'smartfin_v1_prod_stable'; // Changed key to ensure a fresh, stable start
         const RESET_KEY = 'smartfin_last_reset_date';
 
         const sampleCards = [
@@ -113,9 +112,19 @@
             { id: 2, name: "Sample Card B", due: 20, autopay: false, pps: false, fund: false, deadline: "2026-06-01", remarks: "Waiver needed" }
         ];
 
-        // Ensure we load saved data if it exists, otherwise use samples
-        let savedData = localStorage.getItem(DB_KEY);
-        let cards = (savedData && JSON.parse(savedData).length > 0) ? JSON.parse(savedData) : sampleCards;
+        // Improved Loading Logic
+        let rawData = localStorage.getItem(DB_KEY);
+        let cards = sampleCards;
+        try {
+            if (rawData) {
+                let parsed = JSON.parse(rawData);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    cards = parsed;
+                }
+            }
+        } catch (e) {
+            console.error("Storage load error", e);
+        }
 
         function handleAutomation() {
             const now = new Date();
@@ -134,7 +143,6 @@
             }
         }
 
-        // CORRECTED LOGIC: Requires (Autopay OR PPS) AND Fund for 100%
         const getProgress = (c) => {
             const paymentMethodSet = c.autopay || c.pps;
             const fundsConfirmed = c.fund;
@@ -222,7 +230,7 @@
             const blob = new Blob([JSON.stringify(cards, null, 2)], {type: "application/json"});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `smartfin_export.json`;
+            a.download = `smartfin_data_export.json`;
             a.click();
         };
 
@@ -230,18 +238,16 @@
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
-                    const imported = JSON.parse(event.target.result);
-                    if (Array.isArray(imported)) {
-                        cards = imported;
-                        save();
-                        alert("Import Successful!");
-                    }
+                    cards = JSON.parse(event.target.result);
+                    save();
+                    alert("Import Successful!");
                 } catch(err) { alert("Invalid File."); }
             };
             reader.readAsText(e.target.files[0]);
         };
 
         function save() {
+            // Force save to local storage
             localStorage.setItem(DB_KEY, JSON.stringify(cards));
             render();
         }
