@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFin MVP | Personal Finance Dashboard</title>
+    <style>
+        :root {
+            --notion-bg: #ffffff; --notion-text: #37352f; --notion-border: #edece9;
+            --notion-gray: #f1f1ef; --notion-blue: #2383e2; --status-secure: #00a35c;
+            --status-urgent: #eb5757; --status-overdue: #37352f;
+        }
+        body { font-family: -apple-system, sans-serif; background: var(--notion-bg); color: var(--notion-text); padding: 20px; max-width: 1000px; margin: auto; }
+        .header-main { border-bottom: 2px solid var(--notion-blue); padding-bottom: 10px; margin-bottom: 20px; }
+        h1 { font-size: 1.8rem; margin: 0; }
+        h2 { font-size: 1.1rem; margin-top: 30px; border-bottom: 1px solid var(--notion-border); padding-bottom: 5px; color: #666; }
+        .search-container { margin: 15px 0; }
+        #searchInput { width: 100%; padding: 10px; border: 1px solid var(--notion-border); border-radius: 6px; font-size: 14px; outline: none; }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; min-width: 600px; }
+        th { text-align: left; color: rgba(55, 53, 47, 0.6); font-weight: 600; border-bottom: 1px solid var(--notion-border); padding: 10px; background: #fafafa; }
+        td { padding: 10px; border-bottom: 1px solid var(--notion-border); vertical-align: middle; }
+        .edit-input { width: 90%; padding: 4px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; background: transparent; }
+        .edit-input:focus { background: #fff; border-color: var(--notion-blue); outline: none; }
+        .progress-text { font-family: monospace; font-weight: bold; }
+        .controls { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 10px; background: #f9f9f9; padding: 15px; border-radius: 8px; }
+        .btn-action { padding: 8px 12px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: white; font-weight: 600; font-size: 12px; }
+        .btn-blue { background: var(--notion-blue); color: white; border: none; }
+        .urgent-text { color: var(--status-urgent); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="header-main">
+        <h1>SmartFin MVP <small style="font-size: 10px; color: #aaa;">v1.0 Demo</small></h1>
+    </div>
+
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="🔍 Filter cards..." onkeyup="render()">
+    </div>
+
+    <div class="table-wrapper">
+        <h2>🗓️ Monthly Tracker</h2>
+        <table>
+            <thead><tr><th>Status</th><th>Progress</th><th>Due</th><th>Card</th><th>Auto</th><th>PPS</th><th>Fund</th></tr></thead>
+            <tbody id="paymentBody"></tbody>
+        </table>
+    </div>
+
+    <div class="table-wrapper">
+        <h2>⚠️ Fee Ledger</h2>
+        <table>
+            <thead><tr><th>Status</th><th>Card</th><th>Deadline</th><th>Remarks</th></tr></thead>
+            <tbody id="feeBody"></tbody>
+        </table>
+    </div>
+
+    <h2 style="color: var(--notion-blue);">⚙️ Master Editor</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead><tr><th>Card Name</th><th>Due</th><th>Auto?</th><th>Deadline</th><th>Remarks</th><th></th></tr></thead>
+            <tbody id="masterBody"></tbody>
+        </table>
+    </div>
+    
+    <div class="controls">
+        <button class="btn-action btn-blue" onclick="addNewCard()">+ Add Card</button>
+        <button class="btn-action" onclick="downloadBackup()">💾 Export</button>
+        <button class="btn-action" onclick="document.getElementById('fileInput').click()">📂 Import</button>
+        <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)" style="display:none">
+    </div>
+
+    <script>
+        const DB_KEY = 'smartfin_v1_demo';
+        const sampleCards = [
+            { id: 1, name: "Sample Card A", due: 5, autopay: true, pps: true, fund: true, deadline: "", remarks: "No Fee" },
+            { id: 2, name: "Sample Card B", due: 15, autopay: false, pps: true, fund: false, deadline: "2026-05-01", remarks: "Waiver due" }
+        ];
+
+        let cards = JSON.parse(localStorage.getItem(DB_KEY)) || sampleCards;
+
+        const getProgress = (c) => {
+            const paySet = c.autopay || c.pps;
+            if (paySet && c.fund) return "▓▓▓▓▓▓ 100% ✅";
+            if (paySet || c.fund) return "▓▓▓░░░  50% ⏳";
+            return "░░░░░░   0% ❌";
+        };
+
+        const getStatusShield = (c) => {
+            const today = new Date().getDate();
+            if (c.fund) return `<span style="color:var(--status-secure)">● SECURE</span>`;
+            if (today > c.due) return `<span style="color:var(--status-overdue)">💀 OVERDUE</span>`;
+            if (c.due - today <= 3) return `<span style="color:var(--status-urgent)">🔴 URGENT</span>`;
+            return `<span style="color:#ccc">● PENDING</span>`;
+        };
+
+        function render() {
+            const pBody = document.getElementById('paymentBody');
+            const fBody = document.getElementById('feeBody');
+            const mBody = document.getElementById('masterBody');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            pBody.innerHTML = ''; fBody.innerHTML = ''; mBody.innerHTML = '';
+
+            const today = new Date(); today.setHours(0,0,0,0);
+            const next30 = new Date(); next30.setDate(today.getDate() + 30);
+            const month = `${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+
+            cards.sort((a,b) => a.due - b.due).forEach(c => {
+                if (!c.name.toLowerCase().includes(search)) return;
+
+                pBody.innerHTML += `<tr>
+                    <td style="font-weight:bold">${getStatusShield(c)}</td>
+                    <td class="progress-text">${getProgress(c)}</td>
+                    <td>${c.due}</td>
+                    <td><strong>${c.name}</strong></td>
+                    <td><input type="checkbox" ${c.autopay ? 'checked' : ''} onchange="update(${c.id}, 'autopay', this.checked)"></td>
+                    <td><input type="checkbox" ${c.pps ? 'checked' : ''} onchange="update(${c.id}, 'pps', this.checked)"></td>
+                    <td><input type="checkbox" ${c.fund ? 'checked' : ''} onchange="update(${c.id}, 'fund', this.checked)"></td>
+                </tr>`;
+
+                if (c.deadline) {
+                    const dl = new Date(c.deadline); dl.setHours(0,0,0,0);
+                    let status = dl < today ? `💀 EXPIRED` : dl <= next30 ? `🚩 URGENT` : `🟢 OK`;
+                    fBody.innerHTML += `<tr>
+                        <td class="${dl <= next30 ? 'urgent-text' : ''}">${status}</td>
+                        <td>${c.name}</td><td>${c.deadline}</td><td>${c.remarks}</td>
+                    </tr>`;
+                }
+
+                mBody.innerHTML += `<tr>
+                    <td><input class="edit-input" value="${c.name}" onchange="update(${c.id}, 'name', this.value)"></td>
+                    <td><input class="edit-input" type="number" value="${c.due}" onchange="update(${c.id}, 'due', parseInt(this.value))"></td>
+                    <td><input type="checkbox" ${c.autopay ? 'checked' : ''} onchange="update(${c.id}, 'autopay', this.checked)"></td>
+                    <td><input class="edit-input" type="date" value="${c.deadline}" onchange="update(${c.id}, 'deadline', this.value)"></td>
+                    <td><input class="edit-input" value="${c.remarks}" onchange="update(${c.id}, 'remarks', this.value)"></td>
+                    <td><button onclick="deleteCard(${c.id})" style="border:none;background:none;cursor:pointer;color:#ccc">✕</button></td>
+                </tr>`;
+            });
+        }
+
+        window.update = (id, field, value) => {
+            const card = cards.find(c => c.id === id);
+            card[field] = value;
+            save();
+        };
+
+        window.addNewCard = () => {
+            cards.push({ id: Date.now(), name: "New Card", due: 1, autopay: false, pps: false, fund: false, deadline: "", remarks: "" });
+            save();
+        };
+
+        window.deleteCard = (id) => {
+            if(confirm("Delete?")) { cards = cards.filter(c => c.id !== id); save(); }
+        };
+
+        window.downloadBackup = () => {
+            const blob = new Blob([JSON.stringify(cards, null, 2)], {type: "application/json"});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `smartfin_demo_data.json`;
+            a.click();
+        };
+
+        window.importBackup = (e) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                cards = JSON.parse(event.target.result);
+                save();
+            };
+            reader.readAsText(e.target.files[0]);
+        };
+
+        function save() {
+            localStorage.setItem(DB_KEY, JSON.stringify(cards));
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
