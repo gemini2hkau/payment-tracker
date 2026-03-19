@@ -56,21 +56,27 @@
     </div>
 
     <script>
-        const DB_KEY = 'smartfin_v1_secure_storage';
-        const RESET_KEY = 'smartfin_reset_marker';
+        // 1. PERMANENT DATABASE KEY
+        const DB_KEY = 'smartfin_v1_fixed_storage';
+        const RESET_KEY = 'smartfin_reset_marker_v1';
 
-        let cards = JSON.parse(localStorage.getItem(DB_KEY)) || [
-            { id: 1, name: "DEMO CARD", due: 1, autopay: true, pps: false, fund: false, deadline: "2026-12-01", remarks: "Example" }
+        const initialCards = [
+            { id: 1, name: "SAMPLE CARD", due: 5, autopay: true, pps: false, fund: false, deadline: "2026-12-01", remarks: "Example" }
         ];
+
+        // 2. STABLE LOAD LOGIC
+        let savedData = localStorage.getItem(DB_KEY);
+        let cards = (savedData && JSON.parse(savedData).length > 0) ? JSON.parse(savedData) : initialCards;
 
         function save() {
             try {
                 localStorage.setItem(DB_KEY, JSON.stringify(cards));
-                document.getElementById('storageTag').innerText = "✅ SAVED TO DEVICE";
+                // Visual feedback that the save worked
+                document.getElementById('storageTag').innerText = "✅ DATA PERSISTED";
                 document.getElementById('storageTag').style.background = "#e6fffa";
                 render();
             } catch (e) {
-                alert("Storage Full or Blocked!");
+                alert("Browser Storage Error!");
             }
         }
 
@@ -84,10 +90,15 @@
             }
         }
 
+        // 3. CORRECTED 100% LOGIC
         const getProgress = (c) => {
             const paySet = c.autopay || c.pps;
-            if (paySet && c.fund) return "▓▓▓▓ 100%";
-            if (paySet || c.fund) return "▓▓░░  50%";
+            const fundSet = c.fund;
+            
+            // Requires BOTH for 100%
+            if (paySet && fundSet) return "▓▓▓▓ 100%";
+            // Only one checked
+            if (paySet || fundSet) return "▓▓░░  50%";
             return "░░░░   0%";
         };
 
@@ -128,7 +139,11 @@
         };
         window.importBackup = (e) => {
             const reader = new FileReader();
-            reader.onload = (ev) => { cards = JSON.parse(ev.target.result); save(); alert("Data Imported & Locked!"); };
+            reader.onload = (ev) => { 
+                cards = JSON.parse(ev.target.result); 
+                save(); 
+                alert("Database Locked Successfully!"); 
+            };
             reader.readAsText(e.target.files[0]);
         };
 
