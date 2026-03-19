@@ -157,8 +157,11 @@
         };
 
         const getStatusShield = (c) => {
+            const paymentMethodSet = c.autopay || c.pps;
+            const fundsConfirmed = c.fund;
+            
             const today = new Date().getDate();
-            if (c.fund) return `<span style="color:var(--status-secure)">● SECURE</span>`;
+            if (paymentMethodSet && fundsConfirmed) return `<span style="color:var(--status-secure)">● SECURE</span>`;
             if (today > c.due) return `<span style="color:var(--status-overdue)">💀 OVERDUE</span>`;
             if (c.due - today <= 3) return `<span style="color:var(--status-urgent)">🔴 URGENT</span>`;
             return `<span style="color:#ccc">● PENDING</span>`;
