@@ -180,6 +180,7 @@
             const monthLabel = `${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getFullYear()}`;
             const next30 = new Date(); next30.setDate(today.getDate() + 30);
 
+            // 1. First Pass: Monthly Tracker & Master Database (Sorted by Due Day)
             cards.sort((a,b) => a.due - b.due).forEach(c => {
                 if (!c.name.toLowerCase().includes(search)) return;
 
@@ -194,15 +195,6 @@
                     <td><input type="checkbox" ${c.fund ? 'checked' : ''} onchange="update(${c.id}, 'fund', this.checked)"></td>
                 </tr>`;
 
-                if (c.deadline) {
-                    const dl = new Date(c.deadline); dl.setHours(0,0,0,0);
-                    let status = dl < today ? `💀 EXPIRED` : dl <= next30 ? `🚩 URGENT` : `🟢 OK`;
-                    fBody.innerHTML += `<tr style="${dl <= next30 && dl >= today ? 'background:#fffafa' : ''}">
-                        <td class="${dl <= next30 && dl >= today ? 'urgent-text' : ''}">${status}</td>
-                        <td><strong>${c.name}</strong></td><td>${c.deadline}</td><td>${c.remarks}</td>
-                    </tr>`;
-                }
-
                 mBody.innerHTML += `<tr>
                     <td><input class="edit-input" value="${c.name}" onchange="update(${c.id}, 'name', this.value)"></td>
                     <td><input class="edit-input" type="number" value="${c.due}" onchange="update(${c.id}, 'due', parseInt(this.value))"></td>
@@ -211,6 +203,21 @@
                     <td><input class="edit-input" value="${c.remarks}" onchange="update(${c.id}, 'remarks', this.value)"></td>
                     <td><button onclick="deleteCard(${c.id})" style="border:none;background:none;cursor:pointer;color:#ccc">✕</button></td>
                 </tr>`;
+            });
+
+            // 2. Second Pass: Annual Fee Ledger (Filtered & Sorted by Deadline)
+            cards.filter(c => c.deadline) // Only cards that HAVE a deadline
+                 .sort((a, b) => new Date(a.deadline) - new Date(b.deadline)) // Sort by date
+                 .forEach(c => {
+                    if (!c.name.toLowerCase().includes(search)) return;
+                    
+                    const dl = new Date(c.deadline); dl.setHours(0,0,0,0);
+                    let status = dl < today ? `💀 EXPIRED` : dl <= next30 ? `🚩 URGENT` : `🟢 OK`;
+                    
+                    fBody.innerHTML += `<tr style="${dl <= next30 && dl >= today ? 'background:#fffafa' : ''}">
+                        <td class="${dl <= next30 && dl >= today ? 'urgent-text' : ''}">${status}</td>
+                        <td><strong>${c.name}</strong></td><td>${c.deadline}</td><td>${c.remarks}</td>
+                    </tr>`;
             });
         }
 
