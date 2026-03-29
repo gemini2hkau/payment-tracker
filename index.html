@@ -84,6 +84,7 @@
         <table>
             <thead>
                 <tr>
+                    <th style="width: 60px;">Track?</th>
                     <th>Card Name</th>
                     <th style="width: 60px;">Due</th>
                     <th style="width: 50px;">Auto?</th>
@@ -104,15 +105,14 @@
     </div>
 
     <script>
-        const DB_KEY = 'smartfin_v1_prod_stable'; // Changed key to ensure a fresh, stable start
+        const DB_KEY = 'smartfin_v1_prod_stable'; 
         const RESET_KEY = 'smartfin_last_reset_date';
 
         const sampleCards = [
-            { id: 1, name: "Sample Card A", due: 5, autopay: true, pps: false, fund: false, deadline: "", remarks: "Default Demo" },
-            { id: 2, name: "Sample Card B", due: 20, autopay: false, pps: false, fund: false, deadline: "2026-06-01", remarks: "Waiver needed" }
+            { id: 1, name: "Sample Card A", due: 5, autopay: true, pps: false, fund: false, deadline: "", remarks: "Default Demo", m_tracker: true },
+            { id: 2, name: "Sample Card B", due: 20, autopay: false, pps: false, fund: false, deadline: "2026-06-01", remarks: "Waiver needed", m_tracker: true }
         ];
 
-        // Improved Loading Logic
         let rawData = localStorage.getItem(DB_KEY);
         let cards = sampleCards;
         try {
@@ -180,22 +180,29 @@
             const monthLabel = `${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getFullYear()}`;
             const next30 = new Date(); next30.setDate(today.getDate() + 30);
 
-            // 1. First Pass: Monthly Tracker & Master Database (Sorted by Due Day)
-            cards.sort((a,b) => a.due - b.due).forEach(c => {
+            // Sort once for due date consistency
+            cards.sort((a,b) => a.due - b.due);
+
+            cards.forEach(c => {
                 if (!c.name.toLowerCase().includes(search)) return;
 
-                pBody.innerHTML += `<tr>
-                    <td style="color:#888">${monthLabel}</td>
-                    <td style="font-weight:bold">${getStatusShield(c)}</td>
-                    <td class="progress-text">${getProgress(c)}</td>
-                    <td>${c.due}</td>
-                    <td><strong>${c.name}</strong></td>
-                    <td><input type="checkbox" ${c.autopay ? 'checked' : ''} onchange="update(${c.id}, 'autopay', this.checked)"></td>
-                    <td><input type="checkbox" ${c.pps ? 'checked' : ''} onchange="update(${c.id}, 'pps', this.checked)"></td>
-                    <td><input type="checkbox" ${c.fund ? 'checked' : ''} onchange="update(${c.id}, 'fund', this.checked)"></td>
-                </tr>`;
+                // MONTHLY TRACKER - Only show if m_tracker is true
+                if (c.m_tracker !== false) { 
+                    pBody.innerHTML += `<tr>
+                        <td style="color:#888">${monthLabel}</td>
+                        <td style="font-weight:bold">${getStatusShield(c)}</td>
+                        <td class="progress-text">${getProgress(c)}</td>
+                        <td>${c.due}</td>
+                        <td><strong>${c.name}</strong></td>
+                        <td><input type="checkbox" ${c.autopay ? 'checked' : ''} onchange="update(${c.id}, 'autopay', this.checked)"></td>
+                        <td><input type="checkbox" ${c.pps ? 'checked' : ''} onchange="update(${c.id}, 'pps', this.checked)"></td>
+                        <td><input type="checkbox" ${c.fund ? 'checked' : ''} onchange="update(${c.id}, 'fund', this.checked)"></td>
+                    </tr>`;
+                }
 
+                // MASTER DATABASE REFERENCE - Added m_tracker toggle
                 mBody.innerHTML += `<tr>
+                    <td><input type="checkbox" ${c.m_tracker !== false ? 'checked' : ''} onchange="update(${c.id}, 'm_tracker', this.checked)"></td>
                     <td><input class="edit-input" value="${c.name}" onchange="update(${c.id}, 'name', this.value)"></td>
                     <td><input class="edit-input" type="number" value="${c.due}" onchange="update(${c.id}, 'due', parseInt(this.value))"></td>
                     <td><input type="checkbox" ${c.autopay ? 'checked' : ''} onchange="update(${c.id}, 'autopay', this.checked)"></td>
@@ -205,15 +212,13 @@
                 </tr>`;
             });
 
-            // 2. Second Pass: Annual Fee Ledger (Filtered & Sorted by Deadline)
-            cards.filter(c => c.deadline) // Only cards that HAVE a deadline
-                 .sort((a, b) => new Date(a.deadline) - new Date(b.deadline)) // Sort by date
+            // ANNUAL FEE LEDGER - Sorted by Deadline Date
+            cards.filter(c => c.deadline)
+                 .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
                  .forEach(c => {
                     if (!c.name.toLowerCase().includes(search)) return;
-                    
                     const dl = new Date(c.deadline); dl.setHours(0,0,0,0);
                     let status = dl < today ? `💀 EXPIRED` : dl <= next30 ? `🚩 URGENT` : `🟢 OK`;
-                    
                     fBody.innerHTML += `<tr style="${dl <= next30 && dl >= today ? 'background:#fffafa' : ''}">
                         <td class="${dl <= next30 && dl >= today ? 'urgent-text' : ''}">${status}</td>
                         <td><strong>${c.name}</strong></td><td>${c.deadline}</td><td>${c.remarks}</td>
@@ -228,7 +233,7 @@
         };
 
         window.addNewCard = () => {
-            cards.push({ id: Date.now(), name: "New Card", due: 1, autopay: false, pps: false, fund: false, deadline: "", remarks: "" });
+            cards.push({ id: Date.now(), name: "New Card", due: 1, autopay: false, pps: false, fund: false, deadline: "", remarks: "", m_tracker: true });
             save();
         };
 
@@ -257,7 +262,6 @@
         };
 
         function save() {
-            // Force save to local storage
             localStorage.setItem(DB_KEY, JSON.stringify(cards));
             render();
         }
